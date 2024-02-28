@@ -31,4 +31,5 @@ helm -n nfs upgrade --install nfs-server-provisioner test-nfs-server-provisioner
 
 # создать PVC и примонтировать к Pod (файлы лежат в папке рядом с этой инструкцией)
 kubectl -n nfs apply -f pvc.yaml
+
 kubectl -n nfs apply -f pod.yaml
