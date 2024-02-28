@@ -29,6 +29,10 @@ kubectl -n nfs apply -f pv.yaml
 # установка
 helm -n nfs upgrade --install nfs-server-provisioner test-nfs-server-provisioner/nfs-server-provisioner
 
+# если мы хотим поднять под и примонтировать pv - необходимо установить nfs-common на все воркер ноды
+
+sudo apt-get install nfs-common -y
+
 # создать PVC и примонтировать к Pod (файлы лежат в папке рядом с этой инструкцией)
 kubectl -n nfs apply -f pvc.yaml
 
