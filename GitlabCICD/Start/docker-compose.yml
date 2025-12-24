@@ -1,0 +1,55 @@
+version: '3.8'
+
+services:
+  # GitLab Server
+  gitlab:
+    image: gitlab/gitlab-ce:latest
+    container_name: gitlab
+    hostname: gitlab.devopsnatroechku
+    restart: always
+    environment:
+      GITLAB_OMNIBUS_CONFIG: |
+        external_url 'http://gitlab.devopsnatroechku'
+        gitlab_rails['gitlab_shell_ssh_port'] = 2222
+        gitlab_rails['time_zone'] = 'Europe/Moscow'
+        gitlab_rails['initial_root_password'] = 'Password123!'
+  
+        # Включение Docker registry
+        registry['enable'] = true
+        registry_external_url 'http://gitlab.devopsnatroechku:4567'
+
+    ports:
+      - "80:80"
+      - "4567:4567"  # Docker Registry
+      - "2222:22"    # SSH
+    volumes:
+      - ./gitlab/config:/etc/gitlab
+      - ./gitlab/logs:/var/log/gitlab
+      - ./gitlab/data:/var/opt/gitlab
+    healthcheck:
+      test: ["CMD", "/opt/gitlab/bin/gitlab-healthcheck", " --fail"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - gitlab-net         
+
+  # GitLab Runner
+  gitlab-runner:
+    image: gitlab/gitlab-runner:latest
+    container_name: gitlab-runner
+    restart: always
+    depends_on:
+      - gitlab
+    volumes:
+      - ./gitlab-runner/config:/etc/gitlab-runner
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./gitlab-runner/cache:/cache
+    environment:
+      - CI_SERVER_URL=http://gitlab.devopsnatroechku
+    networks:
+      - gitlab-net      
+
+networks:
+  gitlab-net:
+    driver: bridge     

@@ -1,0 +1,44 @@
+# Описываем стейджы
+stages:
+  - test
+  - build
+  - deploy
+
+# Описываем глобальные переменные
+variables:
+  DOCKER_HOST: unix:///var/run/docker.sock
+  DOCKER_TLS_CERTDIR: ""
+  DOCKER_DRIVER: overlay2
+
+# Описываем джобу запуска юнит тестов с привязкой к стейджу test, используем образ python:3.11, запускаем команды по проверке версии питона/пип, обновлению pip, установки необходимых пакетов и запускаем сами тесты в разделе script. 
+unit-tests:
+  stage: test
+  image: python:3.11
+  script:
+    - python --version
+    - pip --version
+    - pip install --upgrade pip
+    - pip install -r requirements.txt  
+    - echo "🔄 Запуск unit-тестов..."
+    - pytest tests/ -v
+
+# Описываем джобу запуска сборки с привязкой к стейджу build, используем образ docker:24, запускаем команды по сборке докер образа и последующего вывода списка текущих образов в разделе script.
+build:
+  stage: build
+  image: docker:24  
+  script:
+    - echo "🏗️ Сборка Docker образа..."
+    - docker build -t $CI_REGISTRY_IMAGE:$CI_COMMIT_SHORT_SHA -t $CI_REGISTRY_IMAGE:latest .
+    - docker images
+
+# Описываем джобу запуска деплоя с привязкой к стейджу deploy, используем образ alpine:latest, запускаем команды по установке пакетов curl и docker, остановке и удалению контейнера python-app-prod, запуску контейнера python-app-prod и последующем ожиданием в 10 сек и проверке логов в разделе script.
+deploy:
+  stage: deploy
+  image: alpine:latest
+  script:
+    - apk add --no-cache curl docker  
+    - docker stop python-app-prod 2>/dev/null || true
+    - docker rm python-app-prod 2>/dev/null || true
+    - docker run -d --name python-app-prod $CI_REGISTRY_IMAGE:$CI_COMMIT_SHORT_SHA
+    - sleep 10
+    - docker logs python-app-prod
